@@ -1,0 +1,16 @@
+on: push
+name: 🚀 Deploy website on push
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v2
+    
+    - name: 📂 Sync files
+      uses: ftsomuf
+      with:
+        server: ftsomuf
+        username: ftp.cluster028.hosting.ovh.net
+        password: ${{ https://www.ovh.com/secret-as-a-service-ui/#!/secret-retrieve?id=890f0796-22a7-4801-9300-15645e7a398e }}
