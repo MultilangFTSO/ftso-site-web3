@@ -4,79 +4,293 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Web3 Metamask login</title>
+
+    <!-- Importing EthersJS (https://docs.ethers.io/v5/)  -->
+    <script
+      src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+      type="application/javascript"
+    ></script>
+    <!-- A "No Class" CSS stylesheet (https://github.com/andybrewer/mvp/) -->
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css" />
+    <title>Web3 Metamask Login</title>
     <link
       href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css"
       rel="stylesheet"
     />
+    <title>FTSO Price Feed</title>
   </head>
-  <body class="flex w-screen h-screen justify-center items-center">
+  <body style="padding-left: 36px">
+    <h2>FTSO Price Feed</h2>
+    <h4>Fetch Prices</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody id="pricesTableBody"></tbody>
+    </table>
+
+    class="flex w-screen h-screen justify-center items-center">
     <div class="flex-col space-y-2 justify-center items-center">
-      <button
-        id="loginButton"
-        onclick=""
-        class="mx-auto rounded-md p-2 bg-purple-500 text-white"
-      >
+      <button id='loginButton' onclick="" class="mx-auto rounded-md p-2 bg-purple-500 text-white">
         Login with MetaMask
       </button>
-      <p id="userWallet" class="text-lg text-gray-600 my-2"></p>
+      <p id='userWallet' class='text-lg text-gray-600 my-2'></p>
+    <div>
+      
+      Last Update:
+      <span id="timestamp">Loading...</span>
     </div>
-
-    <script>
-      window.userWalletAddress = null;
-      const loginButton = document.getElementById('loginButton');
-      const userWallet = document.getElementById('userWallet');
-
-      function toggleButton() {
-        if (!window.ethereum) {
-          loginButton.innerText = 'MetaMask is not installed';
-          loginButton.classList.remove('bg-purple-500', 'text-white');
-          loginButton.classList.add(
-            'bg-gray-500',
-            'text-gray-100',
-            'cursor-not-allowed'
-          );
-          return false;
-        }
-
-        loginButton.addEventListener('click', loginWithMetaMask);
-      }
-
-      async function loginWithMetaMask() {
-        const accounts = await window.ethereum
-          .request({ method: 'eth_requestAccounts' })
-          .catch((e) => {
-            console.error(e.message);
-            return;
-          });
-        if (!accounts) {
-          return;
-        }
-
-        window.userWalletAddress = accounts[0];
-        userWallet.innerText = window.userWalletAddress;
-        loginButton.innerText = 'Sign out of MetaMask';
-
-        loginButton.removeEventListener('click', loginWithMetaMask);
-        setTimeout(() => {
-          loginButton.addEventListener('click', signOutOfMetaMask);
-        }, 200);
-      }
-
-      function signOutOfMetaMask() {
-        window.userWalletAddress = null;
-        userWallet.innerText = '';
-        loginButton.innerText = 'Sign in with MetaMask';
-
-        loginButton.removeEventListener('click', signOutOfMetaMask);
-        setTimeout(() => {
-          loginButton.addEventListener('click', loginWithMetaMask);
-        }, 200);
-      }
-
-      window.addEventListener('DOMContentLoaded', () => {
-        toggleButton();
-      });
-    </script>
   </body>
 </html>
+
+<script>
+  // Create referrences to the table elements
+  const tableBodyElement = document.getElementById('pricesTableBody');
+  const timestampElement = document.getElementById('timestamp');
+
+  // Create Ethers provider instance
+  var provider = new ethers.providers.JsonRpcProvider(
+    'https://sgb.ftso.com.au/ext/bc/C/rpc'
+  );
+
+  // Create FTSO Registry object with its address and ABI
+  const ftsoRegistry = {
+    address: '0x6D222fb4544ba230d4b90BA1BfC0A01A94E6cB23',
+    abi: [
+      {
+        type: 'function',
+        stateMutability: 'view',
+        outputs: [
+          {
+            type: 'address[]',
+            name: '_ftsos',
+            internalType: 'contract IIFtso[]',
+          },
+        ],
+        name: 'getSupportedFtsos',
+        inputs: [],
+      },
+      {
+        type: 'function',
+        stateMutability: 'view',
+        outputs: [
+          {
+            type: 'string[]',
+            name: '_supportedSymbols',
+            internalType: 'string[]',
+          },
+        ],
+        name: 'getSupportedSymbols',
+        inputs: [],
+      },
+      {
+        type: 'function',
+        stateMutability: 'view',
+        outputs: [
+          { type: 'uint256', name: '_price', internalType: 'uint256' },
+          { type: 'uint256', name: '_timestamp', internalType: 'uint256' },
+        ],
+        name: 'getCurrentPrice',
+        inputs: [{ type: 'string', name: '_symbol', internalType: 'string' }],
+      },
+      {
+        type: 'function',
+        stateMutability: 'view',
+        outputs: [
+          { type: 'uint256', name: '_price', internalType: 'uint256' },
+          { type: 'uint256', name: '_timestamp', internalType: 'uint256' },
+        ],
+        name: 'getCurrentPrice',
+        inputs: [
+          { type: 'uint256', name: '_assetIndex', internalType: 'uint256' },
+        ],
+      },
+    ],
+  };
+
+  // Create FTSO Registry contract instance
+  const ftsoRegistryContract = new ethers.Contract(
+    ftsoRegistry.address,
+    ftsoRegistry.abi,
+    provider
+  );
+
+  // Create empty array for supported symbols
+  var supportedSymbols = [];
+
+  // Main
+  window.onload = async () => {
+    // Fetch supported FTSO symbols
+    supportedSymbols = await ftsoRegistryContract.getSupportedSymbols();
+
+    // Fetch prices for all supported FTSO symbols
+    await getSymbolPrices();
+
+    // Listen for FTSO finalizations and refresh FTSO prices
+    await finalizationListener();
+  };
+
+  async function getSymbolPrices() {
+    // Reset table body to empty
+    tableBodyElement.innerHTML = '';
+
+    // Itterate through FTSO symbols
+    for (let symbol of supportedSymbols) {
+      // Fetch price from FtsoRegistry contract
+      let response = await ftsoRegistryContract['getCurrentPrice(string)'](
+        symbol
+      );
+
+      // Parse BigNumber instances to JS number
+      let price = Number(response._price) / 10 ** 5; // Exponent of 5
+      let timestamp = Number(response._timestamp);
+
+      // Create new row and cells in table
+      const row = document.createElement('tr');
+      const cell1 = document.createElement('td'); // Symbol
+      const cell2 = document.createElement('td'); // Price
+
+      // Fill new row with data
+      cell1.innerHTML =
+        `<img style="width:24px; margin-right:10px;" src="https://cdn.ftso.com.au/assets/images/token-logos/${symbol.toLowerCase()}_64x64.png">` +
+        symbol;
+      cell2.innerHTML = '$' + price;
+
+      // Append new row to the table to be viewed
+      row.append(cell1, cell2);
+      tableBodyElement.appendChild(row);
+
+      // Update the last update timestamp to FTSO's rpeorted timestamp
+      timestampElement.innerHTML = new Date(timestamp * 1000).toLocaleString();
+    }
+  }
+
+  async function finalizationListener() {
+    // Fetch supported FTSOs (addresses)
+    let supportedFtsos = await ftsoRegistryContract.getSupportedFtsos();
+
+    let ftso = {
+      address: supportedFtsos[0],
+      abi: [
+        {
+          type: 'event',
+          name: 'PriceFinalized',
+          inputs: [
+            {
+              type: 'uint256',
+              name: 'epochId',
+              internalType: 'uint256',
+              indexed: true,
+            },
+            {
+              type: 'uint256',
+              name: 'price',
+              internalType: 'uint256',
+              indexed: false,
+            },
+            {
+              type: 'bool',
+              name: 'rewardedFtso',
+              internalType: 'bool',
+              indexed: false,
+            },
+            {
+              type: 'uint256',
+              name: 'lowRewardPrice',
+              internalType: 'uint256',
+              indexed: false,
+            },
+            {
+              type: 'uint256',
+              name: 'highRewardPrice',
+              internalType: 'uint256',
+              indexed: false,
+            },
+            {
+              type: 'uint8',
+              name: 'finalizationType',
+              internalType: 'enum IFtso.PriceFinalizationType',
+              indexed: false,
+            },
+            {
+              type: 'uint256',
+              name: 'timestamp',
+              internalType: 'uint256',
+              indexed: false,
+            },
+          ],
+          anonymous: false,
+        },
+      ],
+    };
+
+    // Create FtsoContract instance
+    const ftsoContract = new ethers.Contract(ftso.address, ftso.abi, provider);
+
+    // Listen for PriceFinalized event
+    ftsoContract.on('PriceFinalized', async () => {
+      // Call getSymbolPrices to refresh FTSO prices and rebuild table
+      getSymbolPrices();
+    });
+  }
+</script>
+
+<script>
+  window.userWalletAddress = null;
+  const loginButton = document.getElementById('loginButton');
+  const userWallet = document.getElementById('userWallet');
+
+  function toggleButton() {
+    if (!window.ethereum) {
+      loginButton.innerText = 'MetaMask is not installed';
+      loginButton.classList.remove('bg-purple-500', 'text-white');
+      loginButton.classList.add(
+        'bg-gray-500',
+        'text-gray-100',
+        'cursor-not-allowed'
+      );
+      return false;
+    }
+
+    loginButton.addEventListener('click', loginWithMetaMask);
+  }
+
+  async function loginWithMetaMask() {
+    const accounts = await window.ethereum
+      .request({ method: 'eth_requestAccounts' })
+      .catch((e) => {
+        console.error(e.message);
+        return;
+      });
+    if (!accounts) {
+      return;
+    }
+
+    window.userWalletAddress = accounts[0];
+    userWallet.innerText = window.userWalletAddress;
+    loginButton.innerText = 'Sign out of MetaMask';
+
+    loginButton.removeEventListener('click', loginWithMetaMask);
+    setTimeout(() => {
+      loginButton.addEventListener('click', signOutOfMetaMask);
+    }, 200);
+  }
+
+  function signOutOfMetaMask() {
+    window.userWalletAddress = null;
+    userWallet.innerText = '';
+    loginButton.innerText = 'Sign in with MetaMask';
+
+    loginButton.removeEventListener('click', signOutOfMetaMask);
+    setTimeout(() => {
+      loginButton.addEventListener('click', loginWithMetaMask);
+    }, 200);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    toggleButton();
+  });
+</script>
