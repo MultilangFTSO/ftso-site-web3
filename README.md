@@ -3,9 +3,9 @@
 A business card site with minimal functionality: 
 - connection via Metamask
 - Output of price data from the Songbird Network blockchain based on EVM
--Ability to wrap/unwrap native SGB token to WSGB and vice versa
--Ability to delegate wrapped WSGB to a choice of two FTSO providers, there are examples of two sites: 
-ftso.thegrungies.com, evolveftso.com/delegate.html
+- Ability to wrap/unwrap native SGB token to WSGB and vice versa
+- Ability to delegate wrapped WSGB to a choice of two FTSO providers, there are examples of two sites: 
+  ftso.thegrungies.com, evolveftso.com/delegate.html
 
 
 List of all required commands is in:
