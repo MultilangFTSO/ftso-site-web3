@@ -7,6 +7,7 @@ A business card site with minimal functionality:
 - Ability to delegate wrapped WSGB to a choice of two FTSO providers, there are examples of two sites: ftso.thegrungies.com, evolveftso.com/delegate.html
 
 List of all required commands is in: WNatContract is at the link in https://songbird-explorer.flare.network/address/0x02f0826ef6aD107Cfc861152B32B52fD11BaB9ED/write-contract#address-tabs
+
 0x02f0826ef6aD107Cfc861152B32B52fD11BaB9ED → Write Contract point7. deposit → (wrap SGB to WSGB) wrap 1sgb → Write Contract point28. withdraw →(unwrap wSGB to SGB) unwrap 10in18 (100000000000000000)
 
 contract WNat is VPToken, IWNat { using SafeMath for uint256; event Deposit(address indexed dst, uint amount); event Withdrawal(address indexed src, uint amount);
