@@ -11,6 +11,6 @@ jobs:
     - name: 📂 Sync files
       uses: ftsomuf
       with:
-        server: ftsomuf
-        username: ftp.cluster028.hosting.ovh.net
-        password: ${{ https://www.ovh.com/secret-as-a-service-ui/#!/secret-retrieve?id=890f0796-22a7-4801-9300-15645e7a398e }}
+        server: ftp.cluster028.hosting.ovh.net
+        username: ftsomuf
+        password: ${{ secrets.ftp_password }}
